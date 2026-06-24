@@ -1,0 +1,46 @@
+# Environnement complet (application + PostgreSQL) — dev / staging.
+# Production : utiliser une base PostgreSQL managée + un volume persistant chiffré
+# pour les pièces justificatives, derrière un reverse-proxy TLS.
+#
+# Démarrage : docker compose up --build
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sosnounous
+      POSTGRES_PASSWORD: sosnounous
+      POSTGRES_DB: sosnounous
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sosnounous"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: "postgresql://sosnounous:sosnounous@db:5432/sosnounous?schema=public"
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+      # Chiffrement des pièces justificatives — REMPLACER par une vraie clé en prod
+      FILE_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      FILE_STORAGE_DIR: "/data/uploads"
+      # Notifications en mode mock tant que les clés providers ne sont pas fournies
+      NOTIFICATIONS_MODE: "mock"
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/data/uploads
+
+volumes:
+  db_data:
+  uploads:

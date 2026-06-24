@@ -1,0 +1,493 @@
+// Schéma de données — SOS Nounous & Services
+// Module M2 (Comptes & Authentification) — CDC §3.1, RG-01 à RG-06.
+//
+// ⚙️ Base : SQLite en développement (zéro installation, exécutable immédiatement).
+//    PRODUCTION : passer `provider = "postgresql"` (CDC §4.2) et adapter DATABASE_URL.
+//    Le schéma est volontairement portable (pas d'enum natif Prisma, non supporté
+//    par SQLite — les valeurs énumérées sont contrôlées côté application).
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Compte utilisateur (Famille, Intervenant ou Administrateur).
+model User {
+  id           String  @id @default(cuid())
+  // RG-01 : rôle unique principal — "FAMILY" | "INTERVENANT" | "ADMIN"
+  role         String  @default("FAMILY")
+  firstName    String
+  lastName     String
+  // RG-02 : e-mail et téléphone uniques
+  email        String  @unique
+  phone        String  @unique
+  // RG-05 : mot de passe stocké haché (jamais en clair)
+  passwordHash String
+  commune      String
+  // Spécifique Intervenant : métiers déclarés (JSON string — portable SQLite/PG)
+  metiers      String?
+
+  // RG-03 : cycle de vie du compte — "PENDING" | "ACTIVE" | "SUSPENDED"
+  status          String    @default("PENDING")
+  emailVerifiedAt DateTime?
+  phoneVerifiedAt DateTime?
+
+  // RG-04 : consentement RGPD obligatoire et horodaté
+  consentAt DateTime
+
+  // RG-06 : protection anti-bruteforce
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  // RG-37 : préférences de notification (les envois critiques restent toujours émis)
+  notifyEmail Boolean @default(true)
+  notifySms   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions           Session[]
+  verificationCodes  VerificationCode[]
+  passwordResets     PasswordResetToken[]
+  intervenantProfile IntervenantProfile?
+  demandes           Demande[]           @relation("FamilyDemandes")
+  sentMessages       Message[]           @relation("SentMessages")
+  documents          Document[]          @relation("FamilyDocuments")
+  reviews            Review[]            @relation("AuthoredReviews")
+
+  @@index([role])
+  @@index([status])
+}
+
+/// Session authentifiée (token opaque côté client, haché en base — révocable).
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Code de vérification (OTP) pour l'activation du compte (RG-03).
+model VerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  channel   String // "email" | "sms"
+  purpose   String   @default("ACCOUNT_VERIFICATION")
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+/// Jeton de réinitialisation de mot de passe (US-03) — haché, à usage unique.
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module M3 — Profils intervenants & base de candidats (RG-07 à RG-11)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Profil professionnel d'un intervenant (cœur de la base de candidats vérifiés).
+/// Les champs « liste » sont stockés en JSON (portable SQLite/PostgreSQL).
+model IntervenantProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  headline  String? // accroche courte
+  bio       String?
+  birthDate DateTime?
+  photoUrl  String? // URL de la photo (dépôt de fichier = incrément ultérieur)
+
+  // Profil professionnel (RG-11 : plusieurs métiers et zones)
+  metiers           String // JSON array
+  zones             String // JSON array de communes / zones d'intervention
+  experienceYears   Int      @default(0)
+  skills            String? // JSON array
+  languages         String? // JSON array
+  formations        String? // JSON array (ex. petite enfance)
+  hasDrivingLicense Boolean  @default(false)
+
+  // Disponibilités (RG : jours, type de mission)
+  missionTypes     String // JSON array (Ponctuel | Régulier | Temps plein)
+  availabilityDays String? // JSON array de jours
+
+  // RG-07 : cycle de vie
+  // DRAFT | SUBMITTED | IN_REVIEW | VERIFIED | ACTIVE | SUSPENDED | ARCHIVED
+  status      String    @default("DRAFT")
+  submittedAt DateTime?
+  verifiedAt  DateTime?
+
+  // Badges de confiance (RG-33) — alimentés par les vérifications
+  identityVerified   Boolean @default(false)
+  referencesVerified Boolean @default(false)
+  trained            Boolean @default(false)
+
+  // Réputation (alimentée par le module Avis — M11)
+  rating      Float?
+  ratingCount Int    @default(0)
+
+  // Gestion agence
+  internalNotes String? // notes internes de qualification (non publiques)
+  blacklisted   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  references        Reference[]
+  verifications     VerificationEvent[]
+  propositions      Proposition[]
+  availabilitySlots AvailabilitySlot[]
+  reviews           Review[]
+  files             IntervenantFile[]
+
+  @@index([status])
+  @@index([blacklisted])
+}
+
+/// Pièce justificative d'un intervenant — stockée chiffrée hors web (CDC §4.4).
+/// Les octets sont sur disque (chiffrés) ; ce modèle ne contient que les métadonnées.
+model IntervenantFile {
+  id           String             @id @default(cuid())
+  profileId    String
+  profile      IntervenantProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  type         String // IDENTITY | PHOTO | REFERENCE | OTHER
+  originalName String
+  mimeType     String
+  size         Int
+  storageKey   String // nom du fichier chiffré sur disque
+  createdAt    DateTime           @default(now())
+
+  @@index([profileId])
+}
+
+/// Référence d'un intervenant (ancien employeur / recommandation) — RG-33.
+model Reference {
+  id           String             @id @default(cuid())
+  profileId    String
+  profile      IntervenantProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  employerName String
+  contact      String?
+  relationship String?
+  // PENDING | VERIFIED | REJECTED
+  status       String             @default("PENDING")
+  note         String?
+  createdAt    DateTime           @default(now())
+
+  @@index([profileId])
+}
+
+/// Événement de vérification tracé (RG-10 : qui, quand, résultat).
+model VerificationEvent {
+  id            String             @id @default(cuid())
+  profileId     String
+  profile       IntervenantProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  // IDENTITY | REFERENCES | APTITUDE
+  type          String
+  // PASS | FAIL | PENDING
+  result        String
+  note          String?
+  performedById String? // identifiant de l'agent agence
+  performedAt   DateTime           @default(now())
+
+  @@index([profileId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modules M5 (Demande & Devis) et M6 (Mise en relation & Candidatures)
+// RG-16 à RG-24
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Demande de garde / de personnel déposée par une famille (ou un invité).
+model Demande {
+  id       String  @id @default(cuid())
+  familyId String? // RG-16 : rattachée à une famille (null = invité)
+  family   User?   @relation("FamilyDemandes", fields: [familyId], references: [id], onDelete: SetNull)
+
+  // Coordonnées (snapshot / invité)
+  contactName  String
+  contactEmail String
+  contactPhone String
+
+  // Expression du besoin
+  serviceType       String
+  frequency         String
+  commune           String
+  quartier          String?
+  scheduleNote      String? // horaires souhaités
+  startDate         DateTime?
+  childrenInfo      String? // nombre / âge des enfants
+  tasks             String?
+  constraints       String?
+  preferredLanguage String?
+  minExperience     Int?
+  budget            String?
+  details           String?
+
+  // RG-17 : cycle de vie
+  // DRAFT | NEW | QUALIFIED | PRESELECTION | PROPOSED | IN_PROGRESS | CONCLUDED | ABANDONED
+  status       String  @default("NEW")
+  assignedToId String? // conseiller / admin affecté
+
+  // Devis / estimation (RG : établir un devis)
+  quoteAmount String?
+  quoteNote   String?
+  quotedAt    DateTime?
+
+  internalNotes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  propositions Proposition[]
+  events       ActivityEvent[]
+  messages     Message[]
+
+  @@index([status])
+  @@index([familyId])
+}
+
+/// Mise en relation : rapproche une demande et un profil proposé (RG-20).
+model Proposition {
+  id        String             @id @default(cuid())
+  demandeId String
+  demande   Demande            @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   IntervenantProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // RG-21 : statuts de candidature
+  // RECEIVED | IN_VERIFICATION | PROPOSED | RETAINED | MEETING_PLANNED | PLACED | REJECTED
+  status String @default("PROPOSED")
+
+  familyInterest      String? // INTERESTED | DECLINED
+  intervenantResponse String? // ACCEPTED | REFUSED
+  meetingAt           DateTime?
+  // RG-22 : divulgation des coordonnées seulement après validation de l'agence
+  coordinatesReleased Boolean   @default(false)
+  note                String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review?
+
+  @@unique([demandeId, profileId])
+  @@index([profileId])
+  @@index([demandeId])
+}
+
+/// Journal d'activité horodaté pour la traçabilité (RG-23).
+model ActivityEvent {
+  id            String   @id @default(cuid())
+  demandeId     String?
+  demande       Demande? @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  propositionId String?
+  kind          String // STATUS | NOTE | PROPOSITION | QUOTE | INTEREST | RESPONSE | MEETING | PLACEMENT | REPLACEMENT
+  message       String
+  performedById String?
+  createdAt     DateTime @default(now())
+
+  @@index([demandeId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modules M7 (Espace Famille) et M8 (Espace Intervenant)
+// Messagerie (RG-25), documents (RG-26), disponibilités (RG-30)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Message d'une conversation rattachée à une demande (famille ↔ agence).
+model Message {
+  id         String   @id @default(cuid())
+  demandeId  String
+  demande    Demande  @relation(fields: [demandeId], references: [id], onDelete: Cascade)
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  senderRole String // FAMILY | ADMIN
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([demandeId])
+}
+
+/// Créneau de disponibilité d'un intervenant (RG-30 : calendrier).
+model AvailabilitySlot {
+  id        String             @id @default(cuid())
+  profileId String
+  profile   IntervenantProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  weekday   String // Lundi … Dimanche
+  startTime String // "08:00"
+  endTime   String // "12:00"
+  createdAt DateTime           @default(now())
+
+  @@index([profileId])
+}
+
+/// Document mis à disposition d'une famille (RG-26 : lecture seule / téléchargeable).
+model Document {
+  id          String   @id @default(cuid())
+  familyId    String
+  family      User     @relation("FamilyDocuments", fields: [familyId], references: [id], onDelete: Cascade)
+  demandeId   String?
+  type        String // DEVIS | CONTRAT | ATTESTATION | FACTURE | AUTRE
+  title       String
+  url         String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([familyId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module M11 — Avis, références & recommandations (RG-31, RG-32, RG-34)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Avis d'une famille sur une prestation réalisée (RG-32) — modéré (RG-31).
+model Review {
+  id            String             @id @default(cuid())
+  // RG-32 : rattaché à une prestation (le placement) et à son auteur
+  propositionId String             @unique
+  proposition   Proposition        @relation(fields: [propositionId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User               @relation("AuthoredReviews", fields: [authorId], references: [id], onDelete: Cascade)
+  profileId     String
+  profile       IntervenantProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  rating  Int // échelle 1 à 5
+  comment String
+
+  // RG-31 / RG-34 : modération
+  // PENDING | APPROVED | REJECTED | HIDDEN
+  status        String  @default("PENDING")
+  agencyReply   String?
+  moderatedById String?
+  moderatedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module M10 — Notifications email / SMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module M9 (suite) — Paramétrage & CMS (RG-41, RG-42)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Entrée de FAQ éditable via le back-office (CMS — RG-42).
+model FaqEntry {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  category  String // Familles | Intervenants | Sécurité & confiance | Tarifs
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published])
+}
+
+/// Service domestique éditable via le back-office (CMS — RG-42).
+/// Les champs « liste » sont stockés en JSON (portable SQLite/PostgreSQL).
+model Service {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  name            String
+  shortName       String
+  tagline         String?
+  description     String
+  longDescription String?
+  tasks           String   @default("[]") // JSON array
+  frequencies     String   @default("[]") // JSON array (Ponctuel|Régulier|Temps plein)
+  useCases        String   @default("[]") // JSON array
+  icon            String   @default("home")
+  sortOrder       Int      @default(0)
+  published       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([published])
+}
+
+/// Zone / commune d'intervention éditable via le back-office (paramétrage — RG-41).
+model Zone {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  sortOrder Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active])
+}
+
+/// Barème / tarif indicatif éditable via le back-office (paramétrage — RG-41).
+model Tarif {
+  id        String   @id @default(cuid())
+  service   String // libellé du service concerné (ou « Tous »)
+  label     String // ex. « Garde régulière »
+  amount    String // ex. « À partir de 80 000 FCFA » (texte, adapté à la locale)
+  unit      String? // ex. « / mois », « / heure »
+  note      String?
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published])
+}
+
+/// Modèle de notification éditable par l'agence (paramétrage — RG-41).
+/// Surcharge l'objet et/ou habille le corps d'un événement ; peut le désactiver.
+model NotificationTemplate {
+  id        String   @id @default(cuid())
+  event     String   @unique
+  subject   String?
+  body      String? // peut contenir le marqueur {message} (contenu dynamique)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Journal des envois de notifications (RG-38 : statut tracé).
+model NotificationLog {
+  id        String   @id @default(cuid())
+  channel   String // email | sms
+  recipient String
+  event     String?
+  // SENT | FAILED | SKIPPED | MOCKED
+  status    String
+  error     String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}

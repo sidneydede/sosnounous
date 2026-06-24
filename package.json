@@ -1,0 +1,38 @@
+{
+  "name": "sos-nounous-services",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Site vitrine et plateforme de mise en relation SOS Nounous & Services (Côte d'Ivoire). Réf. CDC GBC-SOSN-CDC-2026-001.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "node --experimental-strip-types prisma/seed.ts",
+    "db:create-admin": "node --experimental-strip-types prisma/create-admin.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "bcryptjs": "^3.0.3",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "22.10.7",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "10.4.20",
+    "eslint": "9.18.0",
+    "eslint-config-next": "^16.2.9",
+    "postcss": "8.5.1",
+    "prisma": "^6.19.3",
+    "tailwindcss": "3.4.17",
+    "typescript": "5.7.3"
+  }
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SOS Nounous & Services">
+  <rect width="64" height="64" rx="14" fill="#15324B" />
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#FAF7F1" stroke-width="2" opacity="0.85" />
+  <path d="M17 34 L32 21 L47 34 Z" fill="#FAF7F1" />
+  <path d="M32 44c-6.5-4.2-8.7-7.8-5.9-10.8 1.9-2 4.7-1.2 5.9.8 1.2-2 4-2.8 5.9-.8 2.8 3 .6 6.6-5.9 10.8z" fill="#DE7F5C" />
+</svg>
