@@ -38,7 +38,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-brand-100 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       {/* Bandeau de réassurance : téléphone visible en permanence (CDC §5.3) */}
       <div className="hidden bg-brand-900 text-white md:block">
-        <Container className="flex items-center justify-between py-1.5 text-sm">
+        <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between px-4 py-1.5 text-sm sm:px-6 lg:px-8">
           <span className="text-brand-100">{site.signature}</span>
           <div className="flex items-center gap-5">
             <a
@@ -51,34 +51,37 @@ export function Header() {
               <Icon name="clock" className="h-4 w-4" /> {site.contact.hours}
             </span>
           </div>
-        </Container>
+        </div>
       </div>
 
-      <Container className="flex h-16 items-center justify-between gap-4">
+      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         {/* Logo / marque */}
         <Logo className="shrink-0" />
 
-        {/* Navigation desktop */}
-        <nav aria-label="Navigation principale" className="hidden items-center gap-1 xl:flex">
-          {mainNav.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={isActive(item.href) ? "page" : undefined}
-              className={cn(
-                "rounded-full px-3 py-2 text-sm font-medium transition-colors",
-                isActive(item.href)
-                  ? "text-accent-600"
-                  : "text-ink-soft hover:text-brand-800",
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+        {/* Navigation desktop — séparateurs verticaux pleine hauteur pour délimiter chaque item */}
+        <nav aria-label="Navigation principale" className="hidden h-16 items-stretch min-[1360px]:flex">
+          {mainNav.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex items-center border-l border-brand-100 px-4 text-[0.92rem] leading-none tracking-tight transition-colors first:border-l-0",
+                  active
+                    ? "font-semibold text-accent-600"
+                    : "font-medium text-brand-800 hover:bg-cream hover:text-accent-600",
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* CTA desktop */}
-        <div className="hidden items-center gap-2 xl:flex">
+        <div className="hidden items-center gap-2 min-[1360px]:flex">
           <ButtonLink href={authed ? "/espace" : "/connexion"} variant="ghost" size="sm">
             {authed ? "Mon espace" : "Espace client"}
           </ButtonLink>
@@ -90,7 +93,7 @@ export function Header() {
         {/* Bouton menu mobile */}
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-lg p-2 text-brand-900 xl:hidden"
+          className="inline-flex items-center justify-center rounded-lg p-2 text-brand-900 min-[1360px]:hidden"
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
@@ -98,11 +101,11 @@ export function Header() {
         >
           <Icon name={open ? "close" : "menu"} />
         </button>
-      </Container>
+      </div>
 
       {/* Menu mobile */}
       {open && (
-        <div id="mobile-menu" className="border-t border-brand-100 bg-white xl:hidden">
+        <div id="mobile-menu" className="border-t border-brand-100 bg-white min-[1360px]:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {mainNav.map((item) => (
               <Link
