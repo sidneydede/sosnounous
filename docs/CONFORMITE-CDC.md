@@ -3,8 +3,10 @@
 Projet : **SOS Nounous & Services** — Réf. CDC **GBC-SOSN-CDC-2026-001**.
 Légende : ✅ conforme · ⚠️ partiel / à finaliser · ⛔ non couvert (hors périmètre v1 ou opérationnel).
 
-> État technique à la date de la revue : `npm run build` ✅, `npm run lint` ✅ (0 erreur),
-> ~50 routes API + ~35 pages. Base SQLite en dev, PostgreSQL-ready en prod.
+> **Statut : EN PRODUCTION** — déployé sur **Render** (Docker) avec **PostgreSQL managé**.
+> URL : https://sosnounous.onrender.com · `/api/health` → `200 {db:up}` · HSTS actif ·
+> déploiement continu (push Git → redeploy). `npm run build`/`npm run lint` ✅ (0 erreur),
+> ~55 routes API + ~40 pages.
 
 ---
 
@@ -13,17 +15,19 @@ Légende : ✅ conforme · ⚠️ partiel / à finaliser · ⛔ non couvert (hor
 | Axe | Couverture |
 |---|---|
 | **Fonctionnel (modules M1–M12)** | ✅ ~96 % |
-| **Règles de gestion (RG-01 → RG-43)** | ✅ 40 conformes · ⚠️ 3 partielles |
+| **Règles de gestion (RG-01 → RG-43)** | ✅ 41 conformes · ⚠️ 2 partielles |
 | **User stories (US-01 → US-15)** | ✅ 15 / 15 |
-| **Technique & sécurité (§4)** | ✅ ~85 % (reste : tests automatisés, CSP, infra) |
+| **Technique & sécurité (§4)** | ✅ ~88 % (reste : tests automatisés, CSP) |
 | **RGPD / loi 2013-450 (§4.4)** | ✅ mécanismes complets · ⚠️ valeurs légales réelles à saisir |
 | **UX / UI (§5)** | ✅ + charte graphique officielle appliquée |
 | **Livrables (§6)** | ⚠️ code + docs techniques ✅ ; SFD/DAT/maquettes/recette formelle à part |
-| **Mise en production (§8.4)** | ⚠️ artefacts + guide prêts ; déploiement réel à réaliser |
+| **Mise en production (§8.4)** | 🟢 ~70 % — **instance live** (reste : domaine, sauvegardes/plan payant, notifications réelles, recette formelle) |
+| **CDC global (cycle complet P0→P6)** | **~80–83 %** |
 
-**Verdict** : le périmètre **fonctionnel et de développement** du lot 1 est essentiellement
-**réalisé et vérifié**. Restent des éléments **opérationnels** (infra, données réelles, recette
-formelle) et quelques compléments (tests automatisés, exports PDF, cartographie).
+**Verdict** : le périmètre **fonctionnel et de développement** du lot 1 est **réalisé, vérifié et
+déployé en production**. Restent des éléments **opérationnels** (domaine, clés providers,
+sauvegardes/plan payant, données légales réelles, recette formelle) et quelques compléments
+(tests automatisés, CSP, cartographie).
 
 ---
 
@@ -123,9 +127,9 @@ reste en code.
 | 4.2 | Technologies (front, back, BDD, CMS, notif) | ✅ | Next.js 16, Prisma, PostgreSQL (prod), CMS intégré |
 | 4.3 | Sécurité (OWASP, hachage, rate limit, anti-spam, en-têtes) | ✅ | ⚠️ CSP à définir ; CSRF atténué par cookies SameSite |
 | 4.4 | RGPD / loi 2013-450 | ✅ | Consentement, droits, cookies, chiffrement au repos, registre (modèle) ; ⚠️ valeurs légales réelles |
-| 4.5 | Hébergement, TLS, monitoring | ⚠️ | Guide + sonde `/api/health` ; provisioning à réaliser |
-| 4.6 | Performance (≤3s mobile, dispo ≥99,5%) | ✅ | Mobile-first, ISR, optimisations ; cibles à valider en prod |
-| 4.7 | Sauvegarde & PRA | ⚠️ | Procédure documentée ; à mettre en place (infra) |
+| 4.5 | Hébergement, TLS, monitoring | 🟢 | **Déployé sur Render** (Docker) ; TLS auto ; sonde `/api/health` active ; reste domaine perso + région Frankfurt |
+| 4.6 | Performance (≤3s mobile, dispo ≥99,5%) | ✅ | Mobile-first, ISR, optimisations ; cibles à valider en charge réelle |
+| 4.7 | Sauvegarde & PRA | ⚠️ | Procédure documentée ; **à activer** (le plan PostgreSQL `free` n'inclut pas de sauvegardes → plan payant) |
 | 4.8 | Maintenance & évolutivité | ⚠️ | Code modulaire, versionnable (Git) ; ⛔ **tests automatisés non fournis** |
 | 4.9 | Responsive mobile-first | ✅ | Vérifié |
 | 4.10 | Intégrations tierces | ⚠️ | SMS/e-mail (adaptateurs prêts) ; ⛔ cartographie ; Mobile Money phase 2 ; analytics prêt (consentement) |
@@ -154,14 +158,14 @@ reste en code.
 
 | Livrable / critère | État |
 |---|---|
-| Code source versionnable | ✅ (`.gitignore` prêt ; dépôt Git à initialiser) |
+| Code source versionné | ✅ Dépôt Git **GitHub** (`sidneydede/sosnounous`) + **déploiement continu Render** |
 | Documentation technique | ✅ README + `DEPLOIEMENT.md` + `registre-des-traitements.md` + cette revue |
 | SFD/DAT, wireframes/maquettes, prototype | ⚠️ Le CDC tient lieu de SFD ; maquettes = charte fournie ; à formaliser si exigé |
 | Guides utilisateur (Famille/Intervenant/Admin) | ⛔ À produire |
 | Plan & rapports de tests | ⚠️ Tests **manuels** par incrément réalisés ; ⛔ cahier de recette formel + tests automatisés |
 | Recette fonctionnelle (§8.1) | ⚠️ Conformité RG vérifiée ; recette formelle MOA/AMOA à prononcer |
 | Tests techniques (§8.2) | ⚠️ Sécurité partielle, perf à mesurer, compat. multi-navigateurs à tester, restauration à tester |
-| Mise en production (§8.4) | ⚠️ Pré-requis et guide prêts ; PV de MEP à établir |
+| Mise en production (§8.4) | 🟢 **Instance live** (Render + PostgreSQL, migration appliquée, `/api/health` OK) ; reste domaine, sauvegardes, notif. réelles, données légales, PV de recette |
 
 ---
 
@@ -172,8 +176,8 @@ reste en code.
 3. **CMS pages narratives (RG-42)** — FAQ/services/tarifs/zones éditables ; textes À propos/Méthode encore en code.
 4. **Sécurité §4.3** — définir une **CSP**, envisager des jetons CSRF explicites (cookies SameSite atténuent déjà).
 5. **Intégrations §4.10** — cartographie non intégrée ; analytics à brancher (consentement prêt).
-6. **Opérationnel (côté agence/hébergeur)** — PostgreSQL, hébergement, domaine/TLS, sauvegardes, supervision, **clés providers e-mail/SMS**, **informations légales réelles**, recette formelle.
-7. **Données de démonstration** présentes en base de développement (à réinitialiser pour la prod).
+6. **Opérationnel — reste** : **domaine personnalisé**, **sauvegardes** (plan PostgreSQL payant), **clés providers e-mail/SMS** (notifications en *mock*), **informations légales réelles**, **région Frankfurt** (latence CI), recette formelle. — *Faits : hébergement Render + PostgreSQL managé + TLS + sonde de santé + déploiement continu.*
+7. **Compte administrateur de production** à créer (script `npm run db:create-admin` fourni) ; la base de prod n'est volontairement **pas** « seedée » (les pages publiques utilisent le repli par défaut).
 
 ---
 
@@ -181,5 +185,14 @@ reste en code.
 
 Le développement couvre **l'intégralité du cœur fonctionnel du lot 1** (Must + Should have) avec
 les exigences de sécurité et de conformité **implémentées**, et la **charte graphique officielle**
-appliquée. Le projet est **prêt pour la recette et le déploiement**, sous réserve des actions
-opérationnelles listées en §9. Les exclusions (§2.16 « Won't have ») sont respectées.
+appliquée. **La plateforme est déployée et accessible en production** (Render + PostgreSQL managé,
+HTTPS/HSTS, sonde de santé, déploiement continu). Restent des actions **opérationnelles** (domaine,
+sauvegardes/plan payant, clés e-mail/SMS, informations légales réelles, recette formelle) et des
+**compléments de qualité** (tests automatisés, CSP, cartographie). Les exclusions (§2.16
+« Won't have ») sont respectées.
+
+**Avancement CDC global (cycle complet P0→P6) : ~80–83 %.**
+
+---
+
+*Dernière mise à jour : état live (production sur Render). URL : https://sosnounous.onrender.com*
