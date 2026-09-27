@@ -1,24 +1,17 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 
 /**
- * Sonde de santé pour la supervision / les sondes d'orchestrateur (CDC §4.5).
- * Vérifie l'accès à la base de données. Renvoie 200 si tout est opérationnel,
- * 503 sinon. Non mis en cache.
+ * Sonde de vivacité (liveness) — CDC §4.5.
+ * Ne teste QUE le processus applicatif. Une base momentanément injoignable ne
+ * doit pas faire échouer le health check de l'orchestrateur : celui-ci
+ * redémarrerait le conteneur en boucle jusqu'à suspension automatique du
+ * service. L'état de la base est exposé séparément par `/api/health/db`.
  */
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return NextResponse.json(
-      { status: "ok", db: "up", time: new Date().toISOString() },
-      { headers: { "Cache-Control": "no-store" } },
-    );
-  } catch {
-    return NextResponse.json(
-      { status: "error", db: "down" },
-      { status: 503, headers: { "Cache-Control": "no-store" } },
-    );
-  }
+  return NextResponse.json(
+    { status: "ok", time: new Date().toISOString() },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

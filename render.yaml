@@ -11,7 +11,11 @@ databases:
   - name: sosnounous-db
     databaseName: sosnounous
     user: sosnounous
-    plan: free # ⚠️ base de test (expire) ; passer à un plan payant pour la production
+    # ⚠️ NE JAMAIS repasser en `free` : une base gratuite Render EXPIRE et est
+    # SUPPRIMÉE, ce qui fait planter le service en boucle jusqu'à sa suspension
+    # automatique (incident du 27/09/2026). Vérifier l'identifiant de plan exact
+    # dans le tableau de bord Render avant de déployer.
+    plan: basic-256mb
 
 services:
   - type: web

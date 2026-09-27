@@ -135,8 +135,12 @@ docker compose up --build    # voir docker-compose.yml (base + app + volumes)
 ---
 
 ## 8. Supervision (§4.5)
-- Sonde de santé : `GET /api/health` (200 = OK, 503 = base injoignable). À brancher sur
-  l'orchestrateur / l'outil de monitoring (uptime, alertes).
+- **Vivacité** : `GET /api/health` (200 tant que le processus répond). C'est cette sonde —
+  et elle seule — qu'il faut déclarer comme *health check* de l'hébergeur (`healthCheckPath`).
+- **Base de données** : `GET /api/health/db` (200 = base OK, 503 = base injoignable). À brancher
+  sur le monitoring / les alertes, **jamais** sur le health check de l'orchestrateur : une base
+  momentanément injoignable y provoquerait des redémarrages en boucle, puis la suspension
+  automatique du service (incident du 27/09/2026).
 - Journalisation applicative + alertes sur erreurs 5xx.
 - Suivi des envois de notifications : back-office `/espace/admin/notifications` (RG-38).
 

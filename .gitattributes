@@ -1,0 +1,6 @@
+# Les scripts exécutés dans le conteneur Linux doivent rester en LF :
+# des fins de ligne CRLF rendent le point d'entrée illisible ("bad interpreter")
+# et le conteneur sort en erreur au démarrage.
+*.sh text eol=lf
+docker-entrypoint.sh text eol=lf
+Dockerfile text eol=lf
