@@ -10,6 +10,10 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    // Les scripts de seed sont exécutés par `node --experimental-strip-types`,
+    // qui impose l'extension `.ts` explicite dans les imports. Sans cette
+    // option, tsc les rejette (TS5097) et il faudrait les exclure du typage.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -36,7 +40,6 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "prisma/seed.ts"
+    "node_modules"
   ]
 }

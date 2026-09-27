@@ -1,22 +1,22 @@
 /**
- * Seed de données — comptes initiaux + base de profils vérifiés (démo).
- * Exécuter avec : npm run db:seed
+ * Seed de DÉMONSTRATION — comptes fictifs, profils vérifiés, demande d'exemple.
+ * Exécuter avec : npm run db:seed:demo
  *
- * Crée un compte ADMINISTRATEUR (créé en interne — CDC §2.2), des comptes de
- * démonstration (famille + intervenants) et des profils intervenants VÉRIFIÉS
- * pour alimenter la recherche (M4).
+ * ⚠️ DÉVELOPPEMENT ET RECETTE UNIQUEMENT. Ce script crée des comptes au mot de
+ * passe public « MotDePasse123 », dont un compte ADMINISTRATEUR. Il refuse de
+ * s'exécuter avec NODE_ENV=production (voir `assertDemoAllowed`).
  *
- * ⚠️ Mots de passe de démonstration — à changer impérativement hors développement.
+ * En production, l'administrateur se crée avec : npm run db:create-admin
  */
-import { PrismaClient } from "../lib/generated/prisma/index.js";
-import { services as staticServices } from "../lib/data/services.ts";
 import bcrypt from "bcryptjs";
+import { prisma, J, run, assertDemoAllowed } from "./seed-common.ts";
 
-const prisma = new PrismaClient();
-const J = (v: string[]) => JSON.stringify(v);
+const DEMO_PASSWORD = "MotDePasse123";
 
-async function main() {
-  const passwordHash = await bcrypt.hash("MotDePasse123", 12);
+export async function seedDemo(): Promise<void> {
+  assertDemoAllowed();
+
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
   const now = new Date();
 
   // Comptes de base (admin + famille)
@@ -169,66 +169,7 @@ async function main() {
     }
   }
 
-  // CMS — FAQ initiale (si la table est vide)
-  if ((await prisma.faqEntry.count()) === 0) {
-    const faq = [
-      { question: "Comment se déroule une demande de garde ?", answer: "Vous décrivez votre besoin, un conseiller présélectionne des profils vérifiés et vous les propose dans votre espace.", category: "Familles", sortOrder: 1 },
-      { question: "Comment vérifiez-vous les profils ?", answer: "Vérification d'identité et contrôle des références avant qu'un profil ne devienne « vérifié » et proposable.", category: "Sécurité & confiance", sortOrder: 1 },
-      { question: "Comment devenir intervenant ?", answer: "Créez votre compte, complétez votre profil et déposez vos références. Après vérification, vous êtes proposé aux familles.", category: "Intervenants", sortOrder: 1 },
-      { question: "Le devis est-il payant ?", answer: "Non, la demande de devis et l'estimation sont gratuites et sans engagement.", category: "Tarifs", sortOrder: 1 },
-    ];
-    for (const f of faq) await prisma.faqEntry.create({ data: f });
-    console.log("✓ FAQ initiale créée");
-  }
-
-  // CMS — catalogue de services (si la table est vide)
-  if ((await prisma.service.count()) === 0) {
-    for (let i = 0; i < staticServices.length; i++) {
-      const s = staticServices[i];
-      await prisma.service.create({
-        data: {
-          slug: s.slug,
-          name: s.name,
-          shortName: s.shortName,
-          tagline: s.tagline,
-          description: s.description,
-          longDescription: s.longDescription,
-          icon: s.icon,
-          tasks: JSON.stringify(s.tasks),
-          frequencies: JSON.stringify(s.frequencies),
-          useCases: JSON.stringify(s.useCases),
-          sortOrder: i,
-        },
-      });
-    }
-    console.log("✓ Catalogue de services créé");
-  }
-
-  // Paramétrage — zones d'intervention (si la table est vide)
-  if ((await prisma.zone.count()) === 0) {
-    const zones = ["Cocody", "Plateau", "Marcory", "Yopougon", "Treichville", "Abobo", "Adjamé", "Riviera", "Koumassi", "Port-Bouët", "Attécoubé", "Bingerville"];
-    for (let i = 0; i < zones.length; i++) {
-      await prisma.zone.create({ data: { name: zones[i], sortOrder: i } });
-    }
-    console.log("✓ Zones d'intervention créées");
-  }
-
-  // Paramétrage — barèmes indicatifs (si la table est vide)
-  if ((await prisma.tarif.count()) === 0) {
-    const tarifs = [
-      { service: "Garde d'enfants", label: "Garde régulière", amount: "À partir de 80 000 FCFA", unit: "/ mois", sortOrder: 1 },
-      { service: "Aide ménagère", label: "Entretien régulier", amount: "À partir de 60 000 FCFA", unit: "/ mois", sortOrder: 2 },
-      { service: "Tous", label: "Ouverture de dossier", amount: "Sur devis", unit: null, sortOrder: 3 },
-    ];
-    for (const t of tarifs) await prisma.tarif.create({ data: t });
-    console.log("✓ Barèmes indicatifs créés");
-  }
+  console.log(`Mot de passe des comptes de démonstration : ${DEMO_PASSWORD}`);
 }
 
-main()
-  .then(() => console.log("Seed terminé. Mot de passe de démo : MotDePasse123"))
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+run("démonstration", seedDemo);

@@ -179,7 +179,7 @@ Application de la charte officielle (Logo & système, UX/UI) :
 #### Base de données & comptes de démonstration
 ```bash
 npx prisma migrate dev      # crée/migre la base
-npm run db:seed             # comptes de démo (mot de passe : MotDePasse123)
+npm run db:seed             # contenu + comptes de démo (mot de passe : MotDePasse123)
 ```
 Comptes seedés : `admin@sosnounous.ci` (ADMIN), `famille@example.com` (FAMILY),
 `intervenant@example.com` (INTERVENANT). En mode `NOTIFICATIONS_MODE=mock`, les codes
@@ -227,7 +227,7 @@ npm install
 cp .env.example .env         # renseigner DATABASE_URL (PostgreSQL)
 docker compose up -d db      # PostgreSQL local (ou utiliser votre propre instance)
 npm run db:deploy            # applique la migration initiale
-npm run db:seed              # (optionnel) données de démonstration
+npm run db:seed              # (optionnel) contenu + données de démonstration
 npm run dev                  # http://localhost:3000
 ```
 > Le projet utilise **PostgreSQL** (dev & prod). Voir `docs/DEPLOIEMENT.md` pour le déploiement.
@@ -239,7 +239,10 @@ npm run dev                  # http://localhost:3000
 | `npm run build` | Build de production |
 | `npm run start` | Serveur de production |
 | `npm run db:migrate` | Crée/applique une migration Prisma |
-| `npm run db:seed` | Insère les comptes de démonstration |
+| `npm run db:seed` | Contenu **et** démonstration (développement) |
+| `npm run db:seed:content` | Contenu seul : FAQ, services, zones, barèmes — sûr en production |
+| `npm run db:seed:demo` | Comptes et données fictifs — refusé si `NODE_ENV=production` |
+| `npm run db:create-admin` | Crée l'administrateur initial (production) |
 | `npm run db:studio` | Explore la base (Prisma Studio) |
 | `npm run lint` | Analyse ESLint |
 

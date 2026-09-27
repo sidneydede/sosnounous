@@ -59,9 +59,19 @@ Le projet utilise **PostgreSQL** (dev & prod) ; la **migration initiale est four
    ```bash
    npm run db:deploy   # prisma migrate deploy
    ```
-4. **Créer le compte administrateur initial** (ne pas utiliser le seed de démonstration en prod) :
-   soit en adaptant `prisma/seed.ts` (mots de passe changés), soit en insérant l'admin en base
-   (e-mail, `passwordHash` bcrypt, `role='ADMIN'`, `status='ACTIVE'`, `consentAt`).
+4. **Initialiser le contenu** (FAQ, catalogue de services, zones, barèmes). Aucune donnée
+   personnelle ; rejouable, n'écrase pas le contenu déjà édité depuis le back-office :
+   ```bash
+   npm run db:seed:content
+   ```
+5. **Créer le compte administrateur initial** :
+   ```bash
+   npm run db:create-admin
+   ```
+   ⚠️ Ne **jamais** lancer `npm run db:seed` ni `npm run db:seed:demo` en production : ils créent
+   des comptes fictifs, dont un ADMIN au mot de passe public. `db:seed:demo` refuse d'ailleurs de
+   s'exécuter si `NODE_ENV=production` (contournement explicite `ALLOW_DEMO_SEED=1`, réservé à une
+   recette isolée).
 
 > En local, `docker compose up db` fournit une base PostgreSQL prête à l'emploi
 > (voir `docker-compose.yml`).
