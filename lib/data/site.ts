@@ -16,10 +16,10 @@ export const site = {
     "Devenir l'agence de référence en Côte d'Ivoire pour la mise en relation sécurisée et professionnelle entre familles et personnels domestiques.",
   mission:
     "Offrir un accès simple, rapide et fiable à des profils sélectionnés, référencés, formés et accompagnés, tout en valorisant le travail domestique.",
-  // Coordonnées — téléphone fourni par l'agence ; e-mail et adresse restent à compléter.
+  // Coordonnées — téléphone et e-mail fournis par l'agence ; adresse postale à compléter.
   contact: {
     phone: process.env.NEXT_PUBLIC_AGENCY_PHONE ?? "+225 07 77 83 00 33",
-    email: process.env.NEXT_PUBLIC_AGENCY_EMAIL ?? "contact@sosnounous.ci",
+    email: process.env.NEXT_PUBLIC_AGENCY_EMAIL ?? "Koranguiak.nounous@gmail.com",
     hours: "Lundi – Samedi, 8h00 – 19h00",
     city: "Abidjan, Côte d'Ivoire",
     address: "Adresse de l'agence — à compléter", // PLACEHOLDER
@@ -51,7 +51,7 @@ export const legal = {
     contact: "à préciser", // contact de l'hébergeur
   },
   // Contact pour l'exercice des droits (RGPD / loi 2013-450)
-  dataContactEmail: process.env.NEXT_PUBLIC_AGENCY_EMAIL ?? "contact@sosnounous.ci",
+  dataContactEmail: process.env.NEXT_PUBLIC_AGENCY_EMAIL ?? "Koranguiak.nounous@gmail.com",
   authority: "ARTCI (Autorité de Régulation des Télécommunications de Côte d'Ivoire)",
   lastUpdated: "à compléter lors de la validation finale",
 } as const;
